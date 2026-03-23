@@ -97,13 +97,32 @@
         <choice value="savedsearch_name search _time">Yes</choice>
         <default>savedsearch_name _time</default>
       </input>
+      <input type="radio" searchWhenChanged="true" token="exclude_zero_results">
+        <label>Exclude zero-result searches</label>
+        <choice value="">No</choice>
+        <choice value="| where event_count&gt;0">Yes</choice>
+        <default></default>
+      </input>
+      <input type="checkbox" token="ESvR_Exclusions" searchWhenChanged="true">
+        <label>Exclusions</label>
+        <choice value="savedsearch_name!=_ACCELERATE_*">Exclude Accelerations</choice>
+        <choice value="user!=admin">Searches not owned by admin</choice>
+        <choice value="user!=nobody">Searches not owned by nobody</choice>
+        <initialValue>user=*</initialValue>
+        <default>user=*</default>
+        <!-- The final value will be surrounded by prefix and suffix with delimiter between then -->
+        <prefix>(</prefix>
+        <suffix>)</suffix>
+        <delimiter> AND </delimiter>
+      </input>
       <table>
         <search id="events_scanned_vs_returned">
-          <query>index=_audit search_id TERM(action=search) (info=granted OR info=completed) 
+          <query>index=_audit search_id TERM(action=search) (info=granted OR info=completed) $ESvR_Exclusions$
 | stats first(_time) as _time first(total_run_time) as total_run_time first(event_count) as event_count first(scan_count) as
    scan_count first(user) as user first(savedsearch_name) as savedsearch_name first(search) as search by search_id 
 | eval lispy_efficiency = round((event_count / scan_count),5)
 | where lispy_efficiency &lt; 0.5 AND total_run_time &gt; 5 AND scan_count &gt; 100
+$exclude_zero_results$
 | sort - total_run_time 
 | table total_run_time event_count scan_count lispy_efficiency user $include_search_string$ search_id</query>
           <earliest>-60m@m</earliest>
